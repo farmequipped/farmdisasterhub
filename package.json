@@ -1,0 +1,16 @@
+{
+  "name": "farmhub-server",
+  "version": "1.0.0",
+  "description": "Mirrored server for FarmHub with main server data sync",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "nodemailer": "^6.9.7",
+    "xss": "^1.0.14",
+    "bonjour": "^3.5.0"
+  }
+}
