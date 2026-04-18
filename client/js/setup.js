@@ -1,12 +1,12 @@
 const socket = io();
 
-socket.on('serverStarted', (data) => {
-    alert(`Server started successfully with ID: ${data.serverId}`);
-    window.location.href = '/';
+socket.emit('checkConfig', {}, (response) => {
+    if (response === 'set up') {
+        window.location.href = '/';
+    }
 });
 
 socket.on('serverStarted', (data) => {
-    alert(`Server started successfully with ID: ${data.serverId}`);
     window.location.href = '/';
 });
 

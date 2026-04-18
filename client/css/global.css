@@ -1,0 +1,14 @@
+:root {
+    --bg: #ffffff;
+    --border: #f0f0f0;
+    --text: #333;
+    --alert: #ff5722;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+}

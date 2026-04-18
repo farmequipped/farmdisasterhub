@@ -3,11 +3,12 @@ const path = require('path');
 const http = require('http');
 const app = express();
 const nodemailer = require('nodemailer');
-const xss = require('xss');
+// const xss = require('xss');
 const bonjour = require('bonjour')();
 const discoveredDevices = new Map();
 let currentServerId = null;
 const fs = require('fs').promises;
+require('dotenv').config();
 
 
 const { Server } = require("socket.io");
@@ -24,8 +25,38 @@ app.use(express.static("client"));
 app.use(express.json());
 
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/pages/setup.html'));
+});
+app.get('/home', (req, res) => {
     res.sendFile(path.join(__dirname, 'client/pages/home.html'));
 });
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    port:465,
+    secure:true,
+    auth: {
+      user: 'farmequippeddui@gmail.com',
+      pass: process.env.PASSWORD
+    }
+});
+
+
+const sendEmail = (toLine, subLine, htmlLine) => {
+    var mailOptions = {
+        from: 'farmequippeddui@gmail.com',
+        to: toLine,
+        subject: subLine,
+        html: htmlLine
+        };
+    transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+        console.log(error);
+    } else {
+        console.log('Email sent: ' + info.response);
+    }
+    });
+};
 
 app.get('/data', async (req, res) => {
     try {
@@ -57,6 +88,7 @@ app.post('/predict', async (req, res) => {
         // Send to hub if not hub
         const configPath = path.join(__dirname, 'server/json/serverconfig.json');
         const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+        sendEmail(config.email, `ALERT ${req.body.predicted_class} ${currentServerId}`, `Alert from ${currentServerId}`, `A ${req.body.predicted_class} was predicted with confidence ${req.body.confidence}. Please check the dashboard for details.<br><br>To help train the model please click either of the buttons below to confirm or deny the alert:<br><br><button onclick="fetch('/confirmAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({serverId: '${currentServerId}', predictedClass: ${req.body.predicted_class}, confidence: ${req.body.confidence}'})})">Confirm Alert</button><br><br><button onclick="fetch('/denyAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({serverId: '${currentServerId}', predictedClass: ${req.body.predicted_class}, confidence: ${req.body.confidence}'})})">Deny Alert</button>`);
         if (currentServerId !== config.hub) {
             const hubAddr = config.hubAddress;
             if (hubAddr) {
@@ -115,7 +147,6 @@ io.on('connection', (socket) => {
             callback('not set up');
         }
     });
-
     socket.on('updateConfig', async (data) => {
         try {
             const configPath = path.join(__dirname, 'server/json/serverconfig.json');
@@ -123,10 +154,6 @@ io.on('connection', (socket) => {
         } catch (err) {
             console.error('Error updating config:', err);
         }
-    });
-
-    socket.on('sendConfirmationEmail', (package, user) => {
-       
     });
     socket.on('loadServer', async (data) => {
         const discovered = [];
@@ -140,6 +167,7 @@ io.on('connection', (socket) => {
         const configPath = path.join(__dirname, 'server/json/serverconfig.json');
         let config = JSON.parse(await fs.readFile(configPath, 'utf8'));
         config.servers = config.servers || [];
+        config.email = data.email;
 
         // If hub not set or not connected, set this as hub
         if (!config.hub || !discoveredDevices.has(config.hub)) {
@@ -150,14 +178,12 @@ io.on('connection', (socket) => {
 
         currentServerId = data.serverId;
 
-        // Add this server to servers if not already
         if (!config.servers.find(s => s.id === data.serverId)) {
             config.servers.push({ id: data.serverId });
         }
 
         await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-        // Send update to other servers
         for (const [otherId, _addr] of discoveredDevices) {
             if (otherId !== data.serverId) {
                 socket.emit('updateConfig', {
@@ -167,7 +193,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Sync data if not hub
         if (data.serverId !== config.hub) {
             const hubEntry = Array.from(discoveredDevices).find(([id, addr]) => id === config.hub);
             if (hubEntry) {

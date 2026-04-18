@@ -1,0 +1,50 @@
+@import "global.css";
+
+body {
+    background:url('../pics/download.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+#setup {
+    text-align: center;
+    background: rgba(255,255,255,0.4);
+    backdrop-filter: blur(20px);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    width: calc(100% - 80px);
+    padding: 20px;
+}
+#setup h2 {
+    margin-bottom: 20px;
+    color: var(--text);
+}
+#setup input {
+    outline:none;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    width: calc(100% - 40px);
+}
+#setup input:focus {
+    border-color: var(--text);
+}
+#setup button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+}
+#email {
+    display:none;
+}

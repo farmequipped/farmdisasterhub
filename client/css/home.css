@@ -1,0 +1,10 @@
+@import "global.css";
+
+#alerts {
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background-color: transparent;
+    width:100%;
+}
