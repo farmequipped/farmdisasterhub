@@ -3,6 +3,30 @@ import numpy as np
 import requests
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
+import board
+import adafruit_dht
+import busio
+import digitalio
+from adafruit_mcp3xxx.mcp3008 import MCP3008
+from adafruit_mcp3xxx.analog_in import AnalogIn
+
+# Setup SPI for MCP3008 ADC
+spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+cs = digitalio.DigitalInOut(board.D5)  # Chip select pin
+mcp = MCP3008(spi, cs)
+
+# Grove Air Quality Sensor connected to channel 0
+airsense_channel = AnalogIn(mcp, 0)
+
+temphumidsense = adafruit_dht.DHT11(board.A2)
+
+VCC = 5.0           # Sensor supply voltage
+RL = 10000          # Load resistor in Ohms (10k)
+RO_CLEAN_AIR = 10000  # Measured Ro in clean air, adjust from calibration
+
+# MQ135 curve constants for CO (from datasheet example)
+A_CO = 110.47
+B_CO = -2.862
 
 # -----------------------------
 # Configuration
@@ -10,7 +34,6 @@ from sklearn.preprocessing import StandardScaler
 MODEL_PATH = "natural_disaster_classifier.h5"
 SERVER_URL = "http://localhost:3000/predict"  # change to your Node.js endpoint
 INTERVAL_SECONDS = 60  # 1 minute
-FEATURE_NAMES = ['temperature', 'co2', 'humidity', 'wind_speed'] #change later
 
 
 model = load_model(MODEL_PATH)
@@ -19,12 +42,29 @@ print("Model loaded successfully.")
 
 scaler = StandardScaler()
 
-def get_live_data(): # Replace with actual sensor data retrieval logic
-    temperature = np.random.uniform(15, 45)
-    co2 = np.random.uniform(350, 600)
-    humidity = np.random.uniform(10, 90)
-    wind_speed = np.random.uniform(0, 30)
-    return np.array([[temperature, co2, humidity, wind_speed]])
+def get_live_data():
+    """
+    Returns 1x3 NumPy array: [CO_ppm, Temp_C, Humidity_%]
+    """
+    try:
+        # Read MQ135 voltage
+        Vrl = airsense_channel.voltage
+        Rs = ((VCC - Vrl) / Vrl) * RL
+        ratio = Rs / RO_CLEAN_AIR
+
+        # Calculate estimated CO in ppm
+        ppm_CO = A_CO * (ratio ** B_CO)
+
+        # Read temperature and humidity
+        temp = temphumidsense.temperature
+        humidity = temphumidsense.humidity
+
+        return np.array([[ppm_CO, temp, humidity]])
+
+    except Exception as e:
+        print(f"Error reading sensors: {e}")
+        return np.zeros((1, 3))
+
 
 # -----------------------------
 # Main loop
