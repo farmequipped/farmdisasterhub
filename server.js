@@ -69,12 +69,12 @@ app.get('/data', async (req, res) => {
     }
 });
 
-app.post('/confirmAlert', async (req, res) => {
+app.get('/confirmAlert', async (req, res) => {
     try {
-        const { ticketId } = req.body;
+        const { ticketId } = req.query;
         const dataPath = path.join(__dirname, 'server/json/data.json');
         let currentData = JSON.parse(await fs.readFile(dataPath, 'utf8'));
-        const alert = currentData.servers[serverId].alerts.find(a => a.ticket === ticketId);
+        const alert = currentData.servers[currentServerId].alerts.find(a => a.ticket === ticketId);
         if (alert) {
             alert.confirmed = true;
             await fs.writeFile(dataPath, JSON.stringify(currentData, null, 2));
@@ -87,9 +87,9 @@ app.post('/confirmAlert', async (req, res) => {
     }
 });
 
-app.post('/denyAlert', async (req, res) => {
+app.get('/denyAlert', async (req, res) => {
     try {
-        const { ticketId } = req.body;
+        const { ticketId } = req.query;
         const dataPath = path.join(__dirname, 'server/json/data.json');
         let currentData = JSON.parse(await fs.readFile(dataPath, 'utf8'));
         const alert = currentData.servers[serverId].alerts.find(a => a.ticket === ticketId);
@@ -113,8 +113,8 @@ app.post('/predict', async (req, res) => {
             currentData.servers[currentServerId] = { stats: {}, alerts: [] };
         }
         currentData.servers[currentServerId].stats = { ...currentData.servers[currentServerId].stats, ...req.body };
+        let ticketId = new Date.now() + currentData.servers[currentServerId].alerts.length;
         if (req.body.predicted_class > 0) {
-            let ticketId = new Date().toISOString() + currentData.servers[currentServerId].alerts.length;
             currentData.servers[currentServerId].alerts.push({
                 message: `Disaster predicted: class ${req.body.predicted_class}`,
                 confidence: req.body.confidence,
@@ -123,11 +123,11 @@ app.post('/predict', async (req, res) => {
             });
         }
         await fs.writeFile(dataPath, JSON.stringify(currentData, null, 2));
-
+        io.emit('dataUpdate', currentData);
         // Send to hub if not hub
         const configPath = path.join(__dirname, 'server/json/serverconfig.json');
         const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-        sendEmail(config.email, `ALERT ${req.body.predicted_class} ${currentServerId}`, `Alert from ${currentServerId}`, `A ${req.body.predicted_class} was predicted with confidence ${req.body.confidence}. Please check the dashboard for details.<br><br>To help train the model please click either of the buttons below to confirm or deny the alert:<br><br><button onclick="fetch('/confirmAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticketId: '${ticketId}'})})">Confirm Alert</button><br><br><button onclick="fetch('/denyAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticketId: '${ticketId}'})})">Deny Alert</button>`);
+        sendEmail(config.email, `ALERT ${req.body.predicted_class} ${currentServerId}`, `Alert from ${currentServerId}`, `A ${req.body.predicted_class} was predicted with confidence ${req.body.confidence}. Please check the dashboard for details.<br><br>To help train the model please click either of the buttons below to confirm or deny the alert:<br><br><a href="http://sage.local:3000/confirmAlert?ticketId=${ticketId}">Confirm Alert</a><br><br><a href="http://sage.local:3000/denyAlert?ticketId=${ticketId}">Deny Alert</a>`);
         if (currentServerId !== config.hub) {
             const hubAddr = config.hubAddress;
             if (hubAddr) {
