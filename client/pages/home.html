@@ -30,8 +30,15 @@
 
 </head>
 <body>
-    <div id="alerts"></div>
-    <div id="stats"></div>
+    <div id="alerts" class="module"></div>
+    <div id="stats" class="module"></div>
+    <div id="buttons" class="module">
+        <h2>Admin Controls</h2>
+        <h4>Server Setup</h4>
+        <button onclick="location.href='/'">Edit Server Config</button>
+        <h4>Use with caution, while retraining the model systems will be affected temporarily.</h4>
+        <button onclick="socket.emit('retrain');">Retrain Model</button>
+    </div>
     
     <!-- Link to external JavaScript file -->
     <script src="/socket.io/socket.io.js"></script>

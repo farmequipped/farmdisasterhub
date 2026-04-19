@@ -1,6 +1,6 @@
 const socket = io();
 
-function loadData() {
+const loadData = () => {
     fetch('/data')
         .then(response => response.json())
         .then(data => {
@@ -13,9 +13,7 @@ function loadData() {
                 statsDiv.innerHTML += `
                     <h3>Server: ${serverId}</h3>
                     <p>Temperature: ${serverData.stats.temperature ? serverData.stats.temperature.toFixed(2) : 'N/A'}</p>
-                    <p>CO2: ${serverData.stats.co2 ? serverData.stats.co2.toFixed(2) : 'N/A'}</p>
                     <p>Humidity: ${serverData.stats.humidity ? serverData.stats.humidity.toFixed(2) : 'N/A'}</p>
-                    <p>Wind Speed: ${serverData.stats.wind_speed ? serverData.stats.wind_speed.toFixed(2) : 'N/A'}</p>
                     <p>Predicted Class: ${serverData.stats.predicted_class || 'N/A'}</p>
                     <p>Confidence: ${serverData.stats.confidence ? serverData.stats.confidence.toFixed(2) : 'N/A'}</p>
                 `;
@@ -26,10 +24,14 @@ function loadData() {
             }
         })
         .catch(err => console.error('Error loading data:', err));
-}
+};
 
 // Load data on page load
 loadData();
+
+socket.on('alert', () => {
+    loadData();
+});
 
 // Refresh data every 30 seconds
 setInterval(loadData, 30000);

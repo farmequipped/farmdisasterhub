@@ -9,6 +9,7 @@ const discoveredDevices = new Map();
 let currentServerId = null;
 const fs = require('fs').promises;
 require('dotenv').config();
+const { exec } = require('child_process');
 
 
 const { Server } = require("socket.io");
@@ -175,6 +176,15 @@ app.post('/updateData', express.json(), async (req, res) => {
 });
 
 io.on('connection', (socket) => {
+    socket.emit('retrain',() => {
+        exec('bash retrain.sh', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error retraining model: ${error}`);
+                return;
+            }
+            socket.emit('retrainComplete', { stdout, stderr });
+        });
+    });
     socket.on('checkConfig', async (data, callback) => {
         try {
             const configPath = path.join(__dirname, 'server/json/serverconfig.json');

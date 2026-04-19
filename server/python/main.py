@@ -10,27 +10,23 @@ import digitalio
 from adafruit_mcp3xxx.mcp3008 import MCP3008
 from adafruit_mcp3xxx.analog_in import AnalogIn
 
-# Setup SPI for MCP3008 ADC
+# Configuration
+MODEL_PATH = "natural_disaster_classifier.h5"
+SERVER_URL = "http://localhost:3000/predict"  # this is node js endpoint on the same machine, adjust if different
+INTERVAL_SECONDS = 60
+
+# --------------------- Code Below is for Raspberry Pi with Grove Air Quality Sensor Replace with more specific sensors for better accuracy ---------------------
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
-cs = digitalio.DigitalInOut(board.D5)  # Chip select pin
+cs = digitalio.DigitalInOut(board.A0) 
 mcp = MCP3008(spi, cs)
 
-# Grove Air Quality Sensor connected to channel 0
 airsense_channel = AnalogIn(mcp, 0)
 
 temphumidsense = adafruit_dht.DHT11(board.A2)
-
-# -----------------------------
-# Configuration
-# -----------------------------
-MODEL_PATH = "natural_disaster_classifier.h5"
-SERVER_URL = "http://localhost:3000/predict"  # change to your Node.js endpoint
-INTERVAL_SECONDS = 60  # 1 minute
-
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 model = load_model(MODEL_PATH)
 print("Model loaded successfully.")
-
 
 scaler = StandardScaler()
 
@@ -39,12 +35,14 @@ def get_live_data():
     Returns 1x5 NumPy array:
     [CO, Formaldehyde, Acetone, Temp, Humidity]
     For Grove v1.3, gases are estimated from the single analog voltage.
+    For more accurate readings use VOC-specific sensors for CO, HCHO, and Acetone example products: (ZE16B-CO, Sensirion SFA30, SGP40)
     """
     try:
         voltage = airsense_channel.voltage
 
-        # Estimate each gas (dummy scaling, since sensor is general VOC)
-        co = voltage * 10         # Arbitrary scaling for demo
+        # Estimatations of each gas (dummy scaling, since sensor is general VOC) if using correct sensors, replace with actual readings per device documentation
+
+        co = voltage * 10   
         formaldehyde = voltage * 5
         acetone = voltage * 2
 
@@ -57,23 +55,18 @@ def get_live_data():
         print(f"Error reading sensors: {e}")
         return np.zeros((1, 5))
 
-# -----------------------------
+
 # Main loop
-# -----------------------------
 while True:
     try:
-        # Get live data
         X_live = get_live_data()
 
-        # Scale features (use the same scaler as training if possible)
-        X_live_scaled = scaler.fit_transform(X_live)  # Replace with saved scaler in real use
+        X_live_scaled = scaler.fit_transform(X_live)  
 
-        # Predict
         predictions = model.predict(X_live_scaled)
         predicted_class = int(np.argmax(predictions, axis=1)[0])
         confidence = float(np.max(predictions))
 
-        # Prepare payload
         payload = {
             "features": X_live.flatten().tolist(),
             "predicted_class": predicted_class,

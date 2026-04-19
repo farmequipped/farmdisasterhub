@@ -5,13 +5,33 @@ body {
     background-size: cover;
 }
 
-#alerts, #stats {
-    margin: 20px;
-    padding: 10px;
-    background: var(--other);
-    border: 1px solid var(--border);
-    width:calc(100% - 60px);
+.module {
+    text-align: center;
+    backdrop-filter: blur(20px);
+    flex-direction: column;
     display:flex;
     flex-wrap:wrap;
     justify-content: space-around;
+    height: auto;
+    width: calc(100% - 82px);
+    padding: 20px;
+    margin: 20px;
+    border: 1px solid var(--border);
+}
+.module button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--text);
+    color: var(--bg);
+    cursor: pointer;
+    outline: none;
+}
+#alerts div {
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px;
+    margin: 10px;
+    border-radius: 5px;
 }
