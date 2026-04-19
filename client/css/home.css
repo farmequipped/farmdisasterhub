@@ -1,10 +1,17 @@
 @import "global.css";
 
-#alerts {
+body {
+    background:var(--bg);
+    background-size: cover;
+}
+
+#alerts, #stats {
     margin: 20px;
     padding: 10px;
+    background: var(--other);
     border: 1px solid var(--border);
-    border-radius: 5px;
-    background-color: transparent;
-    width:100%;
+    width:calc(100% - 60px);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content: space-around;
 }

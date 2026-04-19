@@ -5,9 +5,9 @@ body {
     background-size: cover;
 }
 
-#setup {
+.tab {
     text-align: center;
-    background: rgba(255,255,255,0.4);
+    background: var(--other);
     backdrop-filter: blur(20px);
     position: absolute;
     top: 50%;
@@ -19,12 +19,13 @@ body {
     height: auto;
     width: calc(100% - 80px);
     padding: 20px;
+    display:none;
 }
-#setup h2 {
+.tab h2 {
     margin-bottom: 20px;
     color: var(--text);
 }
-#setup input {
+.tab input {
     outline:none;
     padding: 10px;
     margin: 10px;
@@ -32,10 +33,10 @@ body {
     border-radius: 5px;
     width: calc(100% - 40px);
 }
-#setup input:focus {
+.tab input:focus {
     border-color: var(--text);
 }
-#setup button {
+.tab button {
     padding: 10px 20px;
     margin: 10px;
     border: none;
@@ -45,6 +46,9 @@ body {
     cursor: pointer;
     outline: none;
 }
-#email {
+.show {
+    display:block;
+}
+#emailAddon {
     display:none;
 }

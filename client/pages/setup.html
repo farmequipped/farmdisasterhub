@@ -9,18 +9,18 @@
     <meta name="author" content="Dominik Honzak">
     
     <!-- Open Graph Meta Tags for social media -->
-    <meta property="og:title" content="FarmHub">
+    <meta property="og:title" content="FarmDisasterHub">
     <meta property="og:description" content="A reliable prediction service for natural disasters">
     <meta property="og:image" content="../pics/placeholder.jpg">
     <meta property="og:type" content="website">
 
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="../pics/placeholder.jpg">
-    <meta name="twitter:title" content="FarmHub">
+    <meta name="twitter:title" content="FarmDisasterHub">
     <meta name="twitter:description" content="A reliable prediction service for natural disasters">
     <meta name="twitter:image" content="../pics/placeholder.jpg">
     
-    <title>FarmHub</title>
+    <title>FarmDisasterHub</title>
     
     <!-- Link to favicon -->
     <link rel="icon" href="../pics/icon.png">
@@ -30,11 +30,26 @@
 
 </head>
 <body>
-    <div id="setup">
+    <div class="tab show">Loading...</div>
+    <div class="tab">
+        <h3>Welcome to Farm Disaster Hub</h3>
+        <button onclick="tab(2);">Setup Server</button>
+        <button onclick="tab(3);">Email Alerts</button>
+    </div>
+    <div id="setup" class="tab">
         <h2>Setup Server</h2>
+        <h4>Detected (<span id="serverNumber"></span>) Servers Running</h4>
         <input type="text" id="serverIdInput" placeholder="Enter Server ID (e.g., East Side of Farm)">
-        <input type="email" id="email" placeholder="Enter your email for alerts" />
+        <input type="email" id="emailAddon" placeholder="Enter your email for alerts" />
         <button id="startServerBtn">Enable Server</button>
+    </div>
+    <div id="emails" class="tab">
+        <h2>Email Alerts</h2>
+        <h4>Current Emails</h4>
+        <div id="currentEmails">None</div>
+        <br>
+        <input type="email" id="email" placeholder="Enter your email for alerts" />
+        <button id="addEmailBtn">Add Email</button>
     </div>
     
     <!-- Link to external JavaScript file -->

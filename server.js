@@ -45,7 +45,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = (toLine, subLine, htmlLine) => {
     var mailOptions = {
         from: 'farmequippeddui@gmail.com',
-        to: toLine,
+        to: toLine.join(', '),
         subject: subLine,
         html: htmlLine
         };
@@ -68,6 +68,42 @@ app.get('/data', async (req, res) => {
     }
 });
 
+app.post('/confirmAlert', async (req, res) => {
+    try {
+        const { ticketId } = req.body;
+        const dataPath = path.join(__dirname, 'server/json/data.json');
+        let currentData = JSON.parse(await fs.readFile(dataPath, 'utf8'));
+        const alert = currentData.servers[serverId].alerts.find(a => a.ticket === ticketId);
+        if (alert) {
+            alert.confirmed = true;
+            await fs.writeFile(dataPath, JSON.stringify(currentData, null, 2));
+            res.send('Alert confirmed');
+        } else {
+            res.status(404).send('Alert not found');
+        }
+    } catch (err) {
+        res.status(500).send('Error confirming alert');
+    }
+});
+
+app.post('/denyAlert', async (req, res) => {
+    try {
+        const { ticketId } = req.body;
+        const dataPath = path.join(__dirname, 'server/json/data.json');
+        let currentData = JSON.parse(await fs.readFile(dataPath, 'utf8'));
+        const alert = currentData.servers[serverId].alerts.find(a => a.ticket === ticketId);
+        if (alert) {
+            alert.confirmed = false;
+            await fs.writeFile(dataPath, JSON.stringify(currentData, null, 2));
+            res.send('Alert denied');
+        } else {
+            res.status(404).send('Alert not found');
+        }
+    } catch (err) {
+        res.status(500).send('Error denying alert');
+    }
+});
+
 app.post('/predict', async (req, res) => {
     try {
         const dataPath = path.join(__dirname, 'server/json/data.json');
@@ -77,10 +113,12 @@ app.post('/predict', async (req, res) => {
         }
         currentData.servers[currentServerId].stats = { ...currentData.servers[currentServerId].stats, ...req.body };
         if (req.body.predicted_class > 0) {
+            let ticketId = new Date().toISOString() + currentData.servers[currentServerId].alerts.length;
             currentData.servers[currentServerId].alerts.push({
                 message: `Disaster predicted: class ${req.body.predicted_class}`,
                 confidence: req.body.confidence,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                ticket: ticketId
             });
         }
         await fs.writeFile(dataPath, JSON.stringify(currentData, null, 2));
@@ -88,7 +126,7 @@ app.post('/predict', async (req, res) => {
         // Send to hub if not hub
         const configPath = path.join(__dirname, 'server/json/serverconfig.json');
         const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-        sendEmail(config.email, `ALERT ${req.body.predicted_class} ${currentServerId}`, `Alert from ${currentServerId}`, `A ${req.body.predicted_class} was predicted with confidence ${req.body.confidence}. Please check the dashboard for details.<br><br>To help train the model please click either of the buttons below to confirm or deny the alert:<br><br><button onclick="fetch('/confirmAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({serverId: '${currentServerId}', predictedClass: ${req.body.predicted_class}, confidence: ${req.body.confidence}'})})">Confirm Alert</button><br><br><button onclick="fetch('/denyAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({serverId: '${currentServerId}', predictedClass: ${req.body.predicted_class}, confidence: ${req.body.confidence}'})})">Deny Alert</button>`);
+        sendEmail(config.email, `ALERT ${req.body.predicted_class} ${currentServerId}`, `Alert from ${currentServerId}`, `A ${req.body.predicted_class} was predicted with confidence ${req.body.confidence}. Please check the dashboard for details.<br><br>To help train the model please click either of the buttons below to confirm or deny the alert:<br><br><button onclick="fetch('/confirmAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticketId: '${ticketId}'})})">Confirm Alert</button><br><br><button onclick="fetch('/denyAlert', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticketId: '${ticketId}'})})">Deny Alert</button>`);
         if (currentServerId !== config.hub) {
             const hubAddr = config.hubAddress;
             if (hubAddr) {
@@ -147,6 +185,35 @@ io.on('connection', (socket) => {
             callback('not set up');
         }
     });
+    socket.on('checkServers', async () => {
+        try {
+            const configPath = path.join(__dirname, 'server/json/serverconfig.json');
+            const jsonData = await fs.readFile(configPath, 'utf8');
+            const config = JSON.parse(jsonData);
+            socket.emit('checkServers', { email: config.email || [], servers: config.servers || [], hub: config.hub });
+        } catch (err) {
+            socket.emit('checkServers', { email: [], servers: [], hub: null });
+        }
+    });
+    socket.on('addEmail', async (action, email) => {
+        try {
+            const configPath = path.join(__dirname, 'server/json/serverconfig.json');
+            const jsonData = await fs.readFile(configPath, 'utf8');
+            const config = JSON.parse(jsonData);
+            switch(action) {
+                case "add":
+                    config.email.push(email);
+                    break;
+                case "remove":
+                    config.email.splice(config.email.indexOf(email), 1);
+                    break;
+            }
+            await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+            socket.emit('addEmail', { email: config.email || [] });
+        } catch (err) {
+            socket.emit('addEmail', { email: [] });
+        }
+    });
     socket.on('updateConfig', async (data) => {
         try {
             const configPath = path.join(__dirname, 'server/json/serverconfig.json');
@@ -156,6 +223,7 @@ io.on('connection', (socket) => {
         }
     });
     socket.on('loadServer', async (data) => {
+        sendEmail(data.email, `Server ${data.serverId} started`, `The server with ID ${data.serverId} has started and joined the network.`);
         const discovered = [];
 
         bonjour.find({ type: 'node-server' }, function (service) {
@@ -167,7 +235,9 @@ io.on('connection', (socket) => {
         const configPath = path.join(__dirname, 'server/json/serverconfig.json');
         let config = JSON.parse(await fs.readFile(configPath, 'utf8'));
         config.servers = config.servers || [];
-        config.email = data.email;
+        if (!config.email.includes(data.email) && data.email) {
+            config.email.push(data.email);
+        }
 
         // If hub not set or not connected, set this as hub
         if (!config.hub || !discoveredDevices.has(config.hub)) {
