@@ -1,3 +1,4 @@
+/* Created by Dominik Honzak */
 @import "global.css";
 
 body {
@@ -29,7 +30,7 @@ body {
     outline: none;
 }
 #alerts div {
-    background: var(--text);
+    background: var(--alert);
     color: var(--bg);
     padding: 10px;
     margin: 10px;

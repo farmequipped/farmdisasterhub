@@ -1,3 +1,4 @@
+/* Created by Dominik Honzak */
 const socket = io();
 
 const tab = function(tabIndex) {

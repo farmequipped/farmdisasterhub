@@ -1,9 +1,9 @@
+/* Created by Dominik Honzak */
 const express = require('express');
 const path = require('path');
 const http = require('http');
 const app = express();
 const nodemailer = require('nodemailer');
-// const xss = require('xss');
 const bonjour = require('bonjour')();
 const discoveredDevices = new Map();
 let currentServerId = null;
